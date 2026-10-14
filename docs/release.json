@@ -1,0 +1,15 @@
+{
+  "source_commit": "2a07ce5a7045b0a15cb5d935ffb05afd094e2ee6",
+  "files": {
+    "index.html": "af205b3005af848a9481d54ac152cd73267c065259df2405ae76ac4bd49a4d4f",
+    "app.js": "916314f948adaf28347feb11eca206af0d9068a4ee2db8035c0b2a896194ae84",
+    "task.js": "a5bcd2440ce3fb20a717a18cc5c2c4df14fd2fe5fc00ef3344a9dc0a01bd0cea",
+    "wav.js": "b3335d4147b1359099c5de66ba768a914f2b96b597fef66aad63b6c44de30547",
+    "capture-worklet.js": "69e9f5020f81b6173611adbb943ea1d52b510963dd5e4744197f6b472e27702f",
+    "sw.js": "7f3343a9eb6aeae9472bebc468852cdd90963635c85cee0bb2891fede08576ae",
+    "manifest.webmanifest": "6068fc2e2cd8374118cff2c9f917a0ee6df40ec2d97e16bdd708754611cb8243",
+    "icon-192.png": "8eb58300d15bd08ee26a7f18fb68dbec03f5a7fe26d86e9526367b6a73ed97a2",
+    "icon-512.png": "9e7bd72829692434dd20e7d0b2e5a6b9301121ee8956f1381b833188b2f605ec",
+    "apple-touch-icon.png": "021c8f43c18916de89139df785f91b661b91b690bbd9da95534af1c953dfc6c5"
+  }
+}

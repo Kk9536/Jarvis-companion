@@ -1,8 +1,9 @@
 // JARVIS Companion web app (ADR-0020 Revision: PWA first). All capture stays in page memory until the Owner exports.
+if (window.top !== window.self) { document.documentElement.replaceChildren(); throw new Error('FRAMED'); }  // TASK-053 C4
 import {verifyTask, TaskError, FORMAT} from './task.js';
 import {encodeWav, peak} from './wav.js';
 
-export const APP_VERSION = 'web-0.1.2';
+export const APP_VERSION = 'web-0.1.3';
 const MAX_AUDIO_S = 30;
 const MAX_VIDEO_S = 60;
 const $ = id => document.getElementById(id);
@@ -111,7 +112,16 @@ $('record').addEventListener('click', async () => {
     stream = await navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, sampleRate: FORMAT.sample_rate,
       echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
     context = new AudioContext({sampleRate: FORMAT.sample_rate});
-    if (context.sampleRate !== FORMAT.sample_rate) throw new Error('RATE');
+    // Record what the device actually delivers, not what was requested (TASK-053 C1).
+    const settings = stream.getAudioTracks()[0].getSettings();
+    if (context.sampleRate !== FORMAT.sample_rate ||
+        (settings.sampleRate !== undefined && settings.sampleRate !== FORMAT.sample_rate)) throw new Error('RATE');
+    var actual = {track_sample_rate: settings.sampleRate ?? null, channel_count: settings.channelCount ?? null,
+                  echo_cancellation: settings.echoCancellation ?? null, noise_suppression: settings.noiseSuppression ?? null,
+                  auto_gain_control: settings.autoGainControl ?? null};
+    if (actual.echo_cancellation || actual.noise_suppression || actual.auto_gain_control) {
+      showError('注意：这台手机没有关掉语音处理（回声消除/降噪/自动增益），录音会照常保存，但会在说明文件里标出。');
+    }
     await context.audioWorklet.addModule('capture-worklet.js');
   } catch (error) {
     stream?.getTracks().forEach(track => track.stop());
@@ -133,7 +143,7 @@ $('record').addEventListener('click', async () => {
     if (frames >= MAX_AUDIO_S * FORMAT.sample_rate) stopAudio();
   };
   source.connect(node);
-  state.audio = {stream, context, chunks, t, item, started: performance.now(), get frames() { return frames; }, get peak() { return maxPeak; }};
+  state.audio = {stream, context, chunks, t, item, actual, started: performance.now(), get frames() { return frames; }, get peak() { return maxPeak; }};
   $('record').disabled = true;
   $('stop').disabled = false;
 });
@@ -147,10 +157,17 @@ async function stopAudio() {
   $('stop').disabled = true;
   const n = done(a.t.taskId, a.item.label) + 1;
   const name = `${a.t.taskId}__${a.item.label}__${String(n).padStart(2, '0')}.wav`;
-  const wav = new Blob([encodeWav(a.chunks, FORMAT.sample_rate)], {type: 'audio/wav'});
+  // Frames that arrived while closing are cut so the file never exceeds the 30 s limit (TASK-053 C1).
+  let budget = MAX_AUDIO_S * FORMAT.sample_rate;
+  const kept = [];
+  for (const chunk of a.chunks) { if (budget <= 0) break; kept.push(chunk.subarray(0, budget)); budget -= Math.min(budget, chunk.length); }
+  const frames = kept.reduce((total, chunk) => total + chunk.length, 0);
+  const wav = new Blob([encodeWav(kept, FORMAT.sample_rate)], {type: 'audio/wav'});
+  const processing = Boolean(a.actual.echo_cancellation || a.actual.noise_suppression || a.actual.auto_gain_control);
   await addPending(name, wav, {task_id: a.t.taskId, label: a.item.label, index: n, kind: 'RECORD_AUDIO',
-    sample_rate: FORMAT.sample_rate, channels: 1, encoding: 'pcm_s16le', voice_processing: false,
-    duration_ms: Math.round(a.frames / FORMAT.sample_rate * 1000), peak_percent: Math.round(a.peak * 100)});
+    sample_rate: FORMAT.sample_rate, channels: 1, encoding: 'pcm_s16le', voice_processing: processing, actual: a.actual,
+    duration_ms: Math.round(frames / FORMAT.sample_rate * 1000), peak_percent: Math.round(a.peak * 100),
+    note: 'sidecar is unsigned; the importer recomputes rate, duration and SHA-256 from the WAV itself'});
   markDone(a.t.taskId, a.item.label, n);
   renderTask();
   renderRecord();
@@ -193,7 +210,8 @@ $('video-record').addEventListener('click', () => {
     await addPending(`manual__video__${utcStamp()}.mp4`, blob, {kind: 'MANUAL_VIDEO', mime: type,
       width: settings.width, height: settings.height, frame_rate: settings.frameRate, camera: v.facingMode,
       duration_ms: Math.round(performance.now() - started)});
-    closeCamera();
+    // Close only this recording's camera; another camera may have been opened meanwhile (TASK-053 C6).
+    if (state.video === v) closeCamera(); else v.stream.getTracks().forEach(track => track.stop());
   };
   recorder.start(1000);
   v.recorder = recorder;
@@ -218,7 +236,10 @@ $('export').addEventListener('click', async () => {
   try {
     if (navigator.canShare?.({files})) {
       await navigator.share({files, title: 'JARVIS 录制'});
+      state.pending = [];
+      renderPending();
     } else {
+      // Downloads cannot be confirmed: keep the list until the Owner clears it (TASK-053 C6).
       for (const file of files) {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
@@ -226,9 +247,8 @@ $('export').addEventListener('click', async () => {
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 10000);
       }
+      showError('已开始下载；确认文件都存好后再点“清空”。');
     }
-    state.pending = [];
-    renderPending();
   } catch (error) {
     if (error.name !== 'AbortError') showError('导出失败，文件还在列表里。');
   }
