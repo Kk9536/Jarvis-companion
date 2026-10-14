@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="JARVIS">
+<meta name="theme-color" content="#101418">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>JARVIS 伴侣</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f6f7f9; --fg:#14181d; --muted:#5b6570; --card:#fff; --line:#d9dee4; --accent:#0a6cff; --rec:#d7263d; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#101418; --fg:#e8ecf0; --muted:#9aa4ae; --card:#182028; --line:#2a3440; --accent:#4c9aff; --rec:#ff5466; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.5 -apple-system, "PingFang SC", system-ui, sans-serif; background:var(--bg); color:var(--fg);
+         padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+  h1 { font-size:22px; margin:4px 0 12px; }
+  h2 { font-size:17px; margin:0 0 8px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:0 0 14px; }
+  .muted { color:var(--muted); font-size:14px; }
+  button, label.button { appearance:none; border:0; border-radius:12px; padding:12px 16px; font-size:16px; font-weight:600;
+         background:var(--accent); color:#fff; display:inline-block; margin:4px 6px 4px 0; cursor:pointer; }
+  button.secondary { background:transparent; color:var(--accent); border:1px solid var(--line); }
+  button.rec { background:var(--rec); }
+  button:disabled { opacity:.45; }
+  input[type=file] { display:none; }
+  .prompt { font-size:24px; font-weight:700; margin:10px 0; }
+  .items button { display:block; width:100%; text-align:left; background:transparent; color:var(--fg); border:1px solid var(--line); }
+  .items button.active { border-color:var(--accent); }
+  meter { width:100%; height:14px; }
+  .error { color:var(--rec); font-weight:600; }
+  ul { padding-left:18px; margin:6px 0; }
+  video { width:100%; border-radius:10px; background:#000; }
+</style>
+</head>
+<body>
+<h1>JARVIS 伴侣</h1>
+<p class="muted">录音录像只保存在这台手机的内存里，导出前不会离开手机；本页不连接任何服务器。</p>
+
+<section id="task-section">
+  <h2>录音任务</h2>
+  <p id="task-status" class="muted">还没有任务。用“文件”App 里的任务文件导入（由 JARVIS 签名）。</p>
+  <label class="button" for="task-file">导入任务文件</label>
+  <input id="task-file" type="file" accept=".json,application/json">
+  <div id="items" class="items"></div>
+</section>
+
+<section id="record-section" hidden>
+  <h2>录音</h2>
+  <div class="muted">请说：</div>
+  <div id="prompt" class="prompt"></div>
+  <div id="progress" class="muted"></div>
+  <meter id="level" min="0" max="1" low="0.1" high="0.9" optimum="0.5" value="0"></meter>
+  <div id="level-text" class="muted">音量峰值：—</div>
+  <button id="record" class="rec">开始录音</button>
+  <button id="stop" class="secondary" disabled>停止</button>
+</section>
+
+<section>
+  <h2>录像（手动）</h2>
+  <p class="muted">1280×720、30 帧，最长 60 秒。</p>
+  <button id="video-front" class="secondary">前摄像头</button>
+  <button id="video-back" class="secondary">后摄像头</button>
+  <video id="preview" playsinline muted hidden></video>
+  <button id="video-record" class="rec" hidden>开始录像</button>
+  <button id="video-stop" class="secondary" hidden disabled>停止</button>
+</section>
+
+<section>
+  <h2>待导出 <span id="count" class="muted"></span></h2>
+  <ul id="pending"></ul>
+  <button id="export" disabled>导出（分享 → 存储到“文件”）</button>
+  <button id="clear" class="secondary" disabled>清空</button>
+  <p class="muted">每个文件附带一个同名 .json 说明（SHA-256、时长、采样率），JARVIS 导入时据此核对。</p>
+</section>
+
+<p id="error" class="error" role="alert"></p>
+<p class="muted">版本 <span id="version"></span></p>
+<script type="module" src="app.js"></script>
+</body>
+</html>
