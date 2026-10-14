@@ -1,5 +1,5 @@
 // Offline app shell. Same-origin GET only; nothing is fetched from anywhere else.
-const CACHE = 'jarvis-companion-web-0.1.0';
+const CACHE = 'jarvis-companion-web-0.1.1';
 const SHELL = ['./', 'index.html', 'app.js', 'task.js', 'wav.js', 'capture-worklet.js', 'manifest.webmanifest',
                'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));

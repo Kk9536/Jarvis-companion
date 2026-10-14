@@ -2,7 +2,7 @@
 import {verifyTask, TaskError, FORMAT} from './task.js';
 import {encodeWav, peak} from './wav.js';
 
-export const APP_VERSION = 'web-0.1.0';
+export const APP_VERSION = 'web-0.1.1';
 const MAX_AUDIO_S = 30;
 const MAX_VIDEO_S = 60;
 const $ = id => document.getElementById(id);
@@ -45,14 +45,10 @@ function renderPending() {
 }
 
 // ---------- tasks ----------
-$('task-file').addEventListener('change', async event => {
-  showError('');
-  const file = event.target.files[0];
-  event.target.value = '';
-  if (!file) return;
-  if (file.size > 65536) { showError('任务文件太大，已拒绝。'); return; }
+async function loadTask(text) {
   try {
-    state.task = await verifyTask(await file.text());
+    state.task = await verifyTask(text);
+    state.item = null;
   } catch (error) {
     state.task = null;
     const code = error instanceof TaskError ? error.message : 'UNKNOWN';
@@ -61,6 +57,28 @@ $('task-file').addEventListener('change', async event => {
     showError(hint || `任务文件无效（${code}）。`);
   }
   renderTask();
+}
+
+$('task-file').addEventListener('change', async event => {
+  showError('');
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  if (file.size > 65536) { showError('任务文件太大，已拒绝。'); return; }
+  await loadTask(await file.text());
+});
+
+// Same-origin only (CSP connect-src 'self'); the signature, not the server, decides whether a task is accepted.
+$('task-latest').addEventListener('click', async () => {
+  showError('');
+  let text;
+  try {
+    const reply = await fetch('tasks/latest.json', {cache: 'no-store'});
+    if (!reply.ok) throw new Error();
+    text = await reply.text();
+  } catch { showError('现在加载不到任务（需要联网）。'); return; }
+  if (text.length > 65536) { showError('任务文件太大，已拒绝。'); return; }
+  await loadTask(text);
 });
 
 function renderTask() {

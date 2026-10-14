@@ -42,8 +42,9 @@
 
 <section id="task-section">
   <h2>录音任务</h2>
-  <p id="task-status" class="muted">还没有任务。用“文件”App 里的任务文件导入（由 JARVIS 签名）。</p>
-  <label class="button" for="task-file">导入任务文件</label>
+  <p id="task-status" class="muted">还没有任务。点下面的按钮加载 JARVIS 发布的任务（需要联网一次，任务带签名）。</p>
+  <button id="task-latest">加载 JARVIS 的任务</button>
+  <label class="button secondary" for="task-file">从“文件”导入</label>
   <input id="task-file" type="file" accept=".json,application/json">
   <div id="items" class="items"></div>
 </section>
