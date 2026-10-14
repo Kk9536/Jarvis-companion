@@ -2,7 +2,7 @@
 import {verifyTask, TaskError, FORMAT} from './task.js';
 import {encodeWav, peak} from './wav.js';
 
-export const APP_VERSION = 'web-0.1.1';
+export const APP_VERSION = 'web-0.1.2';
 const MAX_AUDIO_S = 30;
 const MAX_VIDEO_S = 60;
 const $ = id => document.getElementById(id);
@@ -238,4 +238,9 @@ $('clear').addEventListener('click', () => {
 });
 
 $('version').textContent = APP_VERSION;
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(r => r.update()).catch(() => {});
+  // A new worker took over: reload once so the page itself is the new version.
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
+}
