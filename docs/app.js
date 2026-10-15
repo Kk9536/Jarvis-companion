@@ -3,7 +3,7 @@ if (window.top !== window.self) { document.documentElement.replaceChildren(); th
 import {verifyTask, TaskError, FORMAT} from './task.js';
 import {encodeWav, peak} from './wav.js';
 
-export const APP_VERSION = 'web-0.1.3';
+export const APP_VERSION = 'web-0.1.5';
 const MAX_AUDIO_S = 30;
 const MAX_VIDEO_S = 60;
 const $ = id => document.getElementById(id);
@@ -235,7 +235,7 @@ $('export').addEventListener('click', async () => {
     new File([p.sidecar], p.name.replace(/\.\w+$/, '.json'), {type: 'application/json'})]);
   try {
     if (navigator.canShare?.({files})) {
-      await navigator.share({files, title: 'JARVIS 录制'});
+      await navigator.share({files});   // no title: iOS saved it as an extra text file next to the recordings
       state.pending = [];
       renderPending();
     } else {
@@ -261,6 +261,15 @@ $('version').textContent = APP_VERSION;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(r => r.update()).catch(() => {});
   // A new worker took over: reload once so the page itself is the new version.
+  // Never reload while recordings exist only in this page's memory (TASK-057 F57-08).
   let reloaded = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return;
+    if (state.pending.length || state.audio || state.video?.recorder?.state === 'recording') {
+      showError('有新版本：先导出录音，再完全关掉 App 重新打开。');
+      return;
+    }
+    reloaded = true;
+    location.reload();
+  });
 }

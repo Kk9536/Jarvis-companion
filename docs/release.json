@@ -1,15 +1,20 @@
 {
-  "source_commit": "2a07ce5a7045b0a15cb5d935ffb05afd094e2ee6",
+  "source_commit": "f6c21807e68339ec73d0f8b94c393fdc9dcdcf5c",
+  "reviewed": "TASK-059 did NOT accept (F59-01 open); published on Owner decision 2026-10-15 (\"\u5148\u522b\u4fee\u2026\u5148\u628a\u6211\u7684\u8d3e\u7ef4\u65af\u5f04\u4e86\")",
   "files": {
-    "index.html": "af205b3005af848a9481d54ac152cd73267c065259df2405ae76ac4bd49a4d4f",
-    "app.js": "916314f948adaf28347feb11eca206af0d9068a4ee2db8035c0b2a896194ae84",
+    "index.html": "8dddca85ad99874ba68199ecff59124914c0ea2cd85e6a27e795c5df4c037496",
+    "app.js": "cb21cfb976935f394ee2424fa3c8faf230752e3fc06ff37538ea40613730dcca",
     "task.js": "a5bcd2440ce3fb20a717a18cc5c2c4df14fd2fe5fc00ef3344a9dc0a01bd0cea",
     "wav.js": "b3335d4147b1359099c5de66ba768a914f2b96b597fef66aad63b6c44de30547",
     "capture-worklet.js": "69e9f5020f81b6173611adbb943ea1d52b510963dd5e4744197f6b472e27702f",
-    "sw.js": "7f3343a9eb6aeae9472bebc468852cdd90963635c85cee0bb2891fede08576ae",
-    "manifest.webmanifest": "6068fc2e2cd8374118cff2c9f917a0ee6df40ec2d97e16bdd708754611cb8243",
-    "icon-192.png": "8eb58300d15bd08ee26a7f18fb68dbec03f5a7fe26d86e9526367b6a73ed97a2",
-    "icon-512.png": "9e7bd72829692434dd20e7d0b2e5a6b9301121ee8956f1381b833188b2f605ec",
-    "apple-touch-icon.png": "021c8f43c18916de89139df785f91b661b91b690bbd9da95534af1c953dfc6c5"
+    "sw.js": "f5231c86c1476453ae4ba43b23b490fed8d4ca555318d7a21ea9041f856f7714",
+    "manifest.webmanifest": "e2e9fb33ef7616dca43eaa73fbf84ea853f254aba25425a678ea4182b9463c8d",
+    "icon-192.png": "cd939d92cb69e90f906d77c3788e17590ca66d10fdd15f4374fe7d8eedfc0676",
+    "icon-512.png": "da5313207dcc65dcb663e961f9a6b4adbed859818ffe634b2e403d53c48f8e90",
+    "apple-touch-icon.png": "f5762ecc7fff4ae2b3b8fca6f642cb3f5e0479e6daf7afe30a67b8255c5ab536"
+  },
+  "tasks": {
+    "first.json": "739e386d1e7a44cdd32cc43eebb11ff8ad9dff167414f58cbb5453a342c0b1b8",
+    "latest.json": "739e386d1e7a44cdd32cc43eebb11ff8ad9dff167414f58cbb5453a342c0b1b8"
   }
 }
