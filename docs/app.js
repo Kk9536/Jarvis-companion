@@ -3,11 +3,14 @@ if (window.top !== window.self) { document.documentElement.replaceChildren(); th
 import {verifyTask, TaskError, FORMAT} from './task.js';
 import {encodeWav, peak} from './wav.js';
 
-export const APP_VERSION = 'web-0.1.5';
+export const APP_VERSION = 'web-0.1.7';
 const MAX_AUDIO_S = 30;
 const MAX_VIDEO_S = 60;
 const $ = id => document.getElementById(id);
-const state = {task: null, item: null, pending: [], audio: null, video: null};
+// unsaved: every capture from its start until addPending has stored it - recording, then finishing (closing,
+// encoding, hashing). Only page memory holds it then, so nothing may reload the page (TASK-059 F59-01).
+const state = {task: null, item: null, pending: [], audio: null, video: null, unsaved: new Set()};
+const holdsRecordings = () => state.pending.length > 0 || state.unsaved.size > 0;
 
 function showError(message) { $('error').textContent = message || ''; }
 
@@ -144,6 +147,7 @@ $('record').addEventListener('click', async () => {
   };
   source.connect(node);
   state.audio = {stream, context, chunks, t, item, actual, started: performance.now(), get frames() { return frames; }, get peak() { return maxPeak; }};
+  state.unsaved.add(state.audio);
   $('record').disabled = true;
   $('stop').disabled = false;
 });
@@ -151,26 +155,34 @@ $('record').addEventListener('click', async () => {
 async function stopAudio() {
   const a = state.audio;
   if (!a) return;
-  state.audio = null;
-  a.stream.getTracks().forEach(track => track.stop());
-  await a.context.close();
-  $('stop').disabled = true;
-  const n = done(a.t.taskId, a.item.label) + 1;
-  const name = `${a.t.taskId}__${a.item.label}__${String(n).padStart(2, '0')}.wav`;
-  // Frames that arrived while closing are cut so the file never exceeds the 30 s limit (TASK-053 C1).
-  let budget = MAX_AUDIO_S * FORMAT.sample_rate;
-  const kept = [];
-  for (const chunk of a.chunks) { if (budget <= 0) break; kept.push(chunk.subarray(0, budget)); budget -= Math.min(budget, chunk.length); }
-  const frames = kept.reduce((total, chunk) => total + chunk.length, 0);
-  const wav = new Blob([encodeWav(kept, FORMAT.sample_rate)], {type: 'audio/wav'});
-  const processing = Boolean(a.actual.echo_cancellation || a.actual.noise_suppression || a.actual.auto_gain_control);
-  await addPending(name, wav, {task_id: a.t.taskId, label: a.item.label, index: n, kind: 'RECORD_AUDIO',
-    sample_rate: FORMAT.sample_rate, channels: 1, encoding: 'pcm_s16le', voice_processing: processing, actual: a.actual,
-    duration_ms: Math.round(frames / FORMAT.sample_rate * 1000), peak_percent: Math.round(a.peak * 100),
-    note: 'sidecar is unsigned; the importer recomputes rate, duration and SHA-256 from the WAV itself'});
-  markDone(a.t.taskId, a.item.label, n);
-  renderTask();
-  renderRecord();
+  state.audio = null;                                  // still in state.unsaved until stored
+  try {
+    a.stream.getTracks().forEach(track => track.stop());
+    await a.context.close();
+    $('stop').disabled = true;
+    const n = done(a.t.taskId, a.item.label) + 1;
+    const name = `${a.t.taskId}__${a.item.label}__${String(n).padStart(2, '0')}.wav`;
+    // Frames that arrived while closing are cut so the file never exceeds the 30 s limit (TASK-053 C1).
+    let budget = MAX_AUDIO_S * FORMAT.sample_rate;
+    const kept = [];
+    for (const chunk of a.chunks) { if (budget <= 0) break; kept.push(chunk.subarray(0, budget)); budget -= Math.min(budget, chunk.length); }
+    const frames = kept.reduce((total, chunk) => total + chunk.length, 0);
+    const wav = new Blob([encodeWav(kept, FORMAT.sample_rate)], {type: 'audio/wav'});
+    const processing = Boolean(a.actual.echo_cancellation || a.actual.noise_suppression || a.actual.auto_gain_control);
+    await addPending(name, wav, {task_id: a.t.taskId, label: a.item.label, index: n, kind: 'RECORD_AUDIO',
+      sample_rate: FORMAT.sample_rate, channels: 1, encoding: 'pcm_s16le', voice_processing: processing, actual: a.actual,
+      duration_ms: Math.round(frames / FORMAT.sample_rate * 1000), peak_percent: Math.round(a.peak * 100),
+      note: 'sidecar is unsigned; the importer recomputes rate, duration and SHA-256 from the WAV itself'});
+    markDone(a.t.taskId, a.item.label, n);
+    renderTask();
+    renderRecord();
+  } catch {
+    $('stop').disabled = true;
+    renderRecord();
+    showError('这段录音没保存成功，请重录。');          // TASK-060 F60-07: never lose a take silently
+  } finally {
+    state.unsaved.delete(a);
+  }
 }
 $('stop').addEventListener('click', stopAudio);
 
@@ -207,13 +219,21 @@ $('video-record').addEventListener('click', () => {
   recorder.ondataavailable = event => { if (event.data.size) parts.push(event.data); };
   recorder.onstop = async () => {
     const blob = new Blob(parts, {type: 'video/mp4'});
-    await addPending(`manual__video__${utcStamp()}.mp4`, blob, {kind: 'MANUAL_VIDEO', mime: type,
-      width: settings.width, height: settings.height, frame_rate: settings.frameRate, camera: v.facingMode,
-      duration_ms: Math.round(performance.now() - started)});
-    // Close only this recording's camera; another camera may have been opened meanwhile (TASK-053 C6).
-    if (state.video === v) closeCamera(); else v.stream.getTracks().forEach(track => track.stop());
+    try {
+      await addPending(`manual__video__${utcStamp()}.mp4`, blob, {kind: 'MANUAL_VIDEO', mime: type,
+        width: settings.width, height: settings.height, frame_rate: settings.frameRate, camera: v.facingMode,
+        duration_ms: Math.round(performance.now() - started)});
+    } catch {
+      showError('这段视频没保存成功，请重录。');
+    } finally {
+      state.unsaved.delete(recorder);
+      // Close only this recording's camera; another camera may have been opened meanwhile (TASK-053 C6).
+      // In finally: a failed store must not leave the camera running (TASK-060 F60-07).
+      if (state.video === v) closeCamera(); else v.stream.getTracks().forEach(track => track.stop());
+    }
   };
   recorder.start(1000);
+  state.unsaved.add(recorder);                         // until onstop has stored it
   v.recorder = recorder;
   v.timer = setTimeout(() => recorder.state === 'recording' && recorder.stop(), MAX_VIDEO_S * 1000);
   $('video-record').disabled = true;
@@ -231,12 +251,14 @@ $('video-stop').addEventListener('click', () => {
 // ---------- export through the share sheet ----------
 $('export').addEventListener('click', async () => {
   showError('');
-  const files = state.pending.flatMap(p => [new File([p.blob], p.name, {type: p.blob.type}),
+  // Only what is in this share sheet leaves the list: recordings stored while it is open stay (TASK-060 F60-01).
+  const exported = new Set(state.pending);
+  const files = [...exported].flatMap(p => [new File([p.blob], p.name, {type: p.blob.type}),
     new File([p.sidecar], p.name.replace(/\.\w+$/, '.json'), {type: 'application/json'})]);
   try {
     if (navigator.canShare?.({files})) {
       await navigator.share({files});   // no title: iOS saved it as an extra text file next to the recordings
-      state.pending = [];
+      state.pending = state.pending.filter(p => !exported.has(p));
       renderPending();
     } else {
       // Downloads cannot be confirmed: keep the list until the Owner clears it (TASK-053 C6).
@@ -258,14 +280,16 @@ $('clear').addEventListener('click', () => {
 });
 
 $('version').textContent = APP_VERSION;
+window.addEventListener('beforeunload', event => { if (holdsRecordings()) event.preventDefault(); });
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(r => r.update()).catch(() => {});
   // A new worker took over: reload once so the page itself is the new version.
-  // Never reload while recordings exist only in this page's memory (TASK-057 F57-08).
+  // Never reload while recordings exist only in this page's memory, including while a stopped
+  // recording is still being encoded (TASK-057 F57-08, TASK-059 F59-01); no later automatic reload either.
   let reloaded = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloaded) return;
-    if (state.pending.length || state.audio || state.video?.recorder?.state === 'recording') {
+    if (holdsRecordings()) {
       showError('有新版本：先导出录音，再完全关掉 App 重新打开。');
       return;
     }

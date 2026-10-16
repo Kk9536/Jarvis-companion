@@ -1,14 +1,18 @@
 {
-  "source_commit": "f6c21807e68339ec73d0f8b94c393fdc9dcdcf5c",
-  "reviewed": "TASK-059 did NOT accept (F59-01 open); published on Owner decision 2026-10-15 (\"\u5148\u522b\u4fee\u2026\u5148\u628a\u6211\u7684\u8d3e\u7ef4\u65af\u5f04\u4e86\")",
+  "source_commit": "5dc7f1831da8cbd30da90805b0136541bfa0d6d8",
+  "reviewed": {
+    "review": "TASK-063",
+    "accepted_commit": "2dba5cc9e37ced1df1860b5f1d13851706240d26",
+    "report_sha256": "bbd56756a57fb25992bf2e07dc3c547f26a062473fa8df80ece0c0674e60eb17"
+  },
   "files": {
     "index.html": "8dddca85ad99874ba68199ecff59124914c0ea2cd85e6a27e795c5df4c037496",
-    "app.js": "cb21cfb976935f394ee2424fa3c8faf230752e3fc06ff37538ea40613730dcca",
+    "app.js": "eca6d08684fa1e93d0d38eb7de599aa4263d54c6050ba0694375a570d59998aa",
     "task.js": "a5bcd2440ce3fb20a717a18cc5c2c4df14fd2fe5fc00ef3344a9dc0a01bd0cea",
     "wav.js": "b3335d4147b1359099c5de66ba768a914f2b96b597fef66aad63b6c44de30547",
     "capture-worklet.js": "69e9f5020f81b6173611adbb943ea1d52b510963dd5e4744197f6b472e27702f",
-    "sw.js": "f5231c86c1476453ae4ba43b23b490fed8d4ca555318d7a21ea9041f856f7714",
-    "manifest.webmanifest": "e2e9fb33ef7616dca43eaa73fbf84ea853f254aba25425a678ea4182b9463c8d",
+    "sw.js": "c0b971c0a661fe7a85838a0a8cc4ee8a74580e10f207846403739b34b03adbc7",
+    "manifest.webmanifest": "77bc8fe6ba4ba63895b9892d3436819fe95db9d1e51020f309e6d4ca4540a007",
     "icon-192.png": "cd939d92cb69e90f906d77c3788e17590ca66d10fdd15f4374fe7d8eedfc0676",
     "icon-512.png": "da5313207dcc65dcb663e961f9a6b4adbed859818ffe634b2e403d53c48f8e90",
     "apple-touch-icon.png": "f5762ecc7fff4ae2b3b8fca6f642cb3f5e0479e6daf7afe30a67b8255c5ab536"
